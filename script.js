@@ -39,11 +39,22 @@ function htmlToPage (html) {
       .filter(it => it)
       .concat(`${title}.html`)
       .join(' > ')
+    const attachments = $('.greybox a')
+      .map((_, it) => {
+          const $it = $(it)
+          return {
+              href: $it.attr('href'),
+              text: $it.text(),
+          }
+      })
+      .get()
+
     return {
         filename,
         title,
         content,
         images,
+        attachments,
     }
 }
 
@@ -61,9 +72,24 @@ function dirToPage (dirname) {
       .forEach(({ name }) => copyToOut(path.join(dirname, name)))
 
     fs.existsSync(outPath) || fs.mkdirSync(outPath)
+
     for (let page of pages) {
-        const { filename, content } = page
+        const { title, attachments, filename, content } = page
         fs.writeFileSync(path.join(outPath, dirname, filename), content)
+        let oldPath, newPath;
+        for (let attachment of attachments) {
+            const { href, text } = attachment
+            const attachmentPath = path.join(outPath, dirname, href)
+            if (fs.existsSync(attachmentPath)) {
+                const attachmentDirname = path.dirname(attachmentPath)
+                fs.renameSync(attachmentPath, path.join(attachmentDirname, text))
+                oldPath = attachmentDirname;
+                newPath = path.join(path.dirname(attachmentDirname), title);
+            }
+        }
+        if (oldPath && newPath) {
+            fs.renameSync(oldPath, newPath)
+        }
     }
 
 }
